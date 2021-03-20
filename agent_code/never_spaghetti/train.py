@@ -1,14 +1,15 @@
-import pickle
-import random
 from collections import namedtuple, deque
 from typing import List
-
+import json
 import events as e
-from .callbacks import state_to_features
-
+import os
+from .pool_party import init_pool, mutate_models
+file_path = os.path.dirname(os.path.realpath(__file__))
+import statistics
 # This is only an example!
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
+
 
 # Hyper parameters -- DO modify
 TRANSITION_HISTORY_SIZE = 3  # keep only ... last transitions
@@ -26,10 +27,31 @@ def setup_training(self):
 
     :param self: This object is passed to all callbacks and you can set arbitrary values.
     """
+    exterminate_old_models = False
+    self.loc_arr = []
+    self.max_models = 100
+    self.current_pool=[]
+    self.actions = []
+
+    if exterminate_old_models:
+        self.counter = 0
+        for f in os.listdir("pool"):
+            if not f.endswith(".keras"):
+                continue
+            os.remove(os.path.join("pool", f))
+        self.current_pool = init_pool(self.current_pool, num_models=self.max_models)
+        self.fitness_list = [-999 for x in range(self.max_models)]
+    else:
+        with open("counter.txt") as infile:
+            self.counter = int(infile.readline())
+        with open(os.path.join(file_path, "fitness.json"), "r") as infile:
+            self.fitness_list = json.load(infile)
+
+        self.current_pool = init_pool(num_models=self.max_models,current_pool=self.current_pool, from_file=True)
     # Example: Setup an array that will note transition tuples
     # (s, a, r, s')
-    self.transitions = deque(maxlen=TRANSITION_HISTORY_SIZE)
-
+    #self.transitions = deque(maxlen=TRANSITION_HISTORY_SIZE)
+    #init_pool(num_models=1)
 
 def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: List[str]):
     """
@@ -49,13 +71,7 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     :param events: The events that occurred when going from  `old_game_state` to `new_game_state`
     """
     self.logger.debug(f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}')
-
-    # Idea: Add your own events to hand out rewards
-    if ...:
-        events.append(PLACEHOLDER_EVENT)
-
-    # state_to_features is defined in callbacks.py
-    self.transitions.append(Transition(state_to_features(old_game_state), self_action, state_to_features(new_game_state), reward_from_events(self, events)))
+    self.actions += events
 
 
 def end_of_round(self, last_game_state: dict, last_action: str, events: List[str]):
@@ -70,29 +86,61 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
     :param self: The same object that is passed to all of your callbacks.
     """
-    self.logger.debug(f'Encountered event(s) {", ".join(map(repr, events))} in final step')
-    self.transitions.append(Transition(state_to_features(last_game_state), last_action, None, reward_from_events(self, events)))
+    self.logger.info(f'Encountered event(s) {", ".join(map(repr, events))} in final step')
+    self.actions += events
 
-    # Store the model
-    with open("my-saved-model.pt", "wb") as file:
-        pickle.dump(self.model, file)
+    if self.counter != self.max_models-1:
+        calculate_fitness(self)
+        setup_new_round(self, self.counter+1)
+    else:
+        outcomes={"ur": [], "ul": [], "br": [], "bl": []}
+        for i, elem in enumerate(self.loc_arr):
+            outcomes[elem].append(self.fitness_list[i])
+        for key, val in outcomes.items():
+             print(key, ": ", round((len([values for values in val if values > 0])/len(val)*100), 1))
+        self.loc_arr = []
+        calculate_fitness(self)
+        print("")
+        print(self.fitness_list, statistics.mean(self.fitness_list))
+        self.current_pool = mutate_models(self, fitness=self.fitness_list, current_pool=self.current_pool)
+        setup_new_round(self, self.counter-(self.max_models-1))
+        self.fitness_list = [-999 for x in range(self.max_models)]
+        print(f"Completed round!")
 
 
-def reward_from_events(self, events: List[str]) -> int:
+def setup_new_round(self, new_counter):
+    """Calculate fitness of current Model then switch to new Model for next rounds."""
+    self.actions.clear()
+    self.counter = new_counter
+    with open("counter.txt", "w") as outfile:
+        outfile.write(str(self.counter))
+    self.model = self.current_pool[self.counter]
+
+
+def calculate_fitness(self):
     """
-    *This is not a required function, but an idea to structure your code.*
-
-    Here you can modify the rewards your agent get so as to en/discourage
-    certain behavior.
+    Calculate fitness based on encountered actions.
     """
-    game_rewards = {
-        e.COIN_COLLECTED: 1,
-        e.KILLED_OPPONENT: 5,
-        PLACEHOLDER_EVENT: -.1  # idea: the custom event is bad
+    fitness_influences = {
+        e.COIN_COLLECTED: 50,
+        e.BOMB_DROPPED: 30,
+        e.KILLED_OPPONENT: 30,
+        e.KILLED_SELF: -80,
+        e.GOT_KILLED: -1,
+        e.CRATE_DESTROYED: 10,
+        e.INVALID_ACTION: -.5,
+        e.MOVED_UP: .1,
+        e.MOVED_DOWN: .1,
+        e.MOVED_LEFT: .1,
+        e.MOVED_RIGHT: .1,
+        #e.WAITED: -.5,
     }
-    reward_sum = 0
-    for event in events:
-        if event in game_rewards:
-            reward_sum += game_rewards[event]
-    self.logger.info(f"Awarded {reward_sum} for events {', '.join(events)}")
-    return reward_sum
+    fitness = 0
+    for event in self.actions:
+        if event in fitness_influences:
+            fitness += fitness_influences[event]
+    self.logger.info(f"Agent has a fitness of {fitness}")
+
+    self.fitness_list[self.counter] = fitness
+    with open(os.path.join(file_path, "fitness.json"), "w") as outpath:
+        json.dump(self.fitness_list, outpath)

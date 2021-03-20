@@ -1,9 +1,20 @@
 import os
-import pickle
-import random
-import numpy as np
-from .translate_gamestate import translate_gamestate
-from .gntm import init_model
+from .translate_gamestate import translate_gamestate, direction_based_translation, bomb_logic
+from .gntm import GNTM
+
+STARTING_POSTITIONS = {
+    (1, 1): "ul",
+    (1, 15): "bl",
+    (15, 1): "ur",
+    (15, 15): "br"
+}
+
+DIRECTION_SWITCHER = {
+    "ul": {"UP": "UP", "RIGHT": "RIGHT", "LEFT": "LEFT", "DOWN": "DOWN"},
+    "bl": {"UP": "LEFT", "RIGHT": "UP", "LEFT": "DOWN", "DOWN": "RIGHT"},
+    "br": {"UP": "DOWN", "RIGHT": "LEFT", "LEFT": "RIGHT", "DOWN": "UP"},
+    "ur": {"UP": "RIGHT", "RIGHT": "DOWN", "LEFT": "UP", "DOWN": "LEFT"},
+}
 
 ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
 
@@ -22,14 +33,12 @@ def setup(self):
 
     :param self: This object is passed to all callbacks and you can set arbitrary values.
     """
-    if self.train or not os.path.isfile("my-saved-model.pt"):
+    if self.train or not os.path.isfile("gntm.keras"):
         self.logger.info("Setting up model from scratch.")
-        weights = np.random.rand(len(ACTIONS))
-        self.model = weights / weights.sum()
+        self.model = GNTM()
     else:
         self.logger.info("Loading model from saved state.")
-        with open("my-saved-model.pt", "rb") as file:
-            self.model = pickle.load(file)
+        self.model = GNTM("gntm.keras")
 
 
 def act(self, game_state: dict) -> str:
@@ -41,42 +50,21 @@ def act(self, game_state: dict) -> str:
     :param game_state: The dictionary that describes everything on the board.
     :return: The action to take as a string.
     """
-    trans_state = translate_gamestate(game_state)
-    #print(trans_state)
-    #init_model(trans_state)
-    # todo Exploration vs exploitation
-    random_prob = .1
-    if self.train and random.random() < random_prob:
-        self.logger.debug("Choosing action purely at random.")
-        # 80%: walk in any direction. 10% wait. 10% bomb.
-        return np.random.choice(ACTIONS, p=[.2, .2, .2, .2, .1, .1])
 
+    if game_state["step"] == 2:
+        return "BOMB"
+    if game_state["step"] == 1:
+        self.loc = (game_state["self"][3][0], game_state["self"][3][1])
+        self.loc = STARTING_POSTITIONS[self.loc]
+        try:
+            self.loc_arr.append(self.loc)
+        except:
+            pass
+    trans_state = direction_based_translation(game_state, self.loc)
+    bomb_logic_arr = bomb_logic(game_state)
     self.logger.debug("Querying model for action.")
-    return np.random.choice(ACTIONS, p=self.model)
-
-
-def state_to_features(game_state: dict) -> np.array:
-    """
-    *This is not a required function, but an idea to structure your code.*
-
-    Converts the game state to the input of your model, i.e.
-    a feature vector.
-
-    You can find out about the state of the game environment via game_state,
-    which is a dictionary. Consult 'get_state_for_agent' in environment.py to see
-    what it contains.
-
-    :param game_state:  A dictionary describing the current game board.
-    :return: np.array
-    """
-    # This is the dict before the game begins and after it ends
-    if game_state is None:
-        return None
-
-    # For example, you could construct several channels of equal shape, ...
-    channels = []
-    channels.append(...)
-    # concatenate them as a feature tensor (they must have the same shape), ...
-    stacked_channels = np.stack(channels)
-    # and return them as a vector
-    return stacked_channels.reshape(-1)
+    wanted_action = ACTIONS[self.model.get_predict(trans_state, bomb_logic_arr)]
+    if "WAIT" == wanted_action or "BOMB" == wanted_action:
+        return wanted_action
+    else:
+        return DIRECTION_SWITCHER[self.loc][wanted_action]
