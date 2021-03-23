@@ -55,8 +55,8 @@ def mutate_models(self, fitness, current_pool):
     for i, parent in enumerate(top_parents[:top_share]):
         for _ in range(2):
             randint = i
-            while randint == i:
-                randint = np.random.randint(0, top_share)
+            if i > 1:
+                randint = np.random.randint(0, i - 1)
             weights_1, weights_2 = make_love_not_gntm(parent, current_pool[randint])
             child_1 = GNTM()
             child_2 = GNTM()
@@ -64,6 +64,7 @@ def mutate_models(self, fitness, current_pool):
             child_2.set_weights(weights_2)
             current_pool.append(child_1.cell_division())
             current_pool.append(child_2.cell_division())
+
 
     assert len(current_pool) == self.max_models
     for i in range(0, len(current_pool)):

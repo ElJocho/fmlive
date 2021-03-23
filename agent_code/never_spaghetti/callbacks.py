@@ -51,8 +51,6 @@ def act(self, game_state: dict) -> str:
     :return: The action to take as a string.
     """
 
-    if game_state["step"] == 2:
-        return "BOMB"
     if game_state["step"] == 1:
         self.loc = (game_state["self"][3][0], game_state["self"][3][1])
         self.loc = STARTING_POSTITIONS[self.loc]
