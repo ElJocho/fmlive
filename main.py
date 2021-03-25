@@ -9,6 +9,7 @@ from environment import BombeRLeWorld, GenericWorld
 from fallbacks import pygame, tqdm, LOADED_PYGAME
 from replay import ReplayWorld
 
+NEVER_SPAGHETTI_COUNTER = 0
 
 # Function to run the game logic in a separate thread
 def game_logic(world: GenericWorld, user_inputs, args):
@@ -75,6 +76,8 @@ def main(argv = None):
         pygame.init()
 
     # Initialize environment and agents
+    with open("./agent_code/never_spaghetti/counter.txt", "w") as outfile:
+        outfile.write(str(0))
     if args.command_name == "play":
         agents = []
         if args.train == 0 and not args.continue_without_training:

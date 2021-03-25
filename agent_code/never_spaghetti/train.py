@@ -6,7 +6,7 @@ import events as e
 import os
 from .pool_party import init_pool, mutate_models
 from .translate_gamestate import direction_based_translation
-
+from copy import deepcopy
 file_path = os.path.dirname(os.path.realpath(__file__))
 import statistics
 # This is only an example!
@@ -31,12 +31,11 @@ def setup_training(self):
     """
     exterminate_old_models = False
     self.loc_arr = []
-    self.max_models = 100
+    self.max_models = 50
     self.current_pool=[]
     self.actions = []
 
     self.round_results = []
-
     if exterminate_old_models:
         self.counter = 0
         for f in os.listdir("pool"):
@@ -45,11 +44,12 @@ def setup_training(self):
             os.remove(os.path.join("pool", f))
         self.current_pool = init_pool(self.current_pool, num_models=self.max_models)
         self.fitness_list = [-999 for x in range(self.max_models)]
+        with open(os.path.join(file_path, "fitness_coin_master.json"), "w") as infile:
+            json.dump([0],infile)
     else:
-        with open("counter.txt") as infile:
-            self.counter = int(infile.readline())
         with open(os.path.join(file_path, "fitness.json"), "r") as infile:
             self.fitness_list = json.load(infile)
+
 
         self.current_pool = init_pool(num_models=self.max_models,current_pool=self.current_pool, from_file=True)
 
@@ -71,13 +71,38 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     :param new_game_state: The state the agent is in now.
     :param events: The events that occurred when going from  `old_game_state` to `new_game_state`
     """
-
     if old_game_state is not None:
         last_state = direction_based_translation(old_game_state, self.loc)
         if last_state[1 , 1::2].any() == 1 and self_action == "BOMB" and old_game_state["self"][2]:
             events.append(e.BOMB_NEXT_TO_CRATE)
         if e.BOMB_EXPLODED in events and (e.CRATE_DESTROYED not in events and e.KILLED_OPPONENT not in events):
             events.append(e.BOMB_USELESS)
+
+        coin_dir = last_state[4,1::2]
+
+
+        if self.loc == 'ur':
+            temp = deepcopy(coin_dir[3])
+            coin_dir[1:4] = coin_dir[0:3]
+            coin_dir[0] = temp
+        if self.loc == 'br':
+            temp = deepcopy(coin_dir[2:4])
+            coin_dir[2:4] = coin_dir[0:2]
+            coin_dir[0:2] = temp
+        if self.loc == 'bl':
+            temp = deepcopy(coin_dir[0])
+            coin_dir[0:3] = coin_dir[1:4]
+            coin_dir[3] = temp
+        if (coin_dir[0] > 0 and self_action == 'UP'):
+            events.append(e.MOVED_TOWARDS_COIN)
+        if (coin_dir[1] > 0 and self_action == 'RIGHT'):
+            events.append(e.MOVED_TOWARDS_COIN)
+        if (coin_dir[2] > 0 and self_action == 'DOWN'):
+            events.append(e.MOVED_TOWARDS_COIN)
+        if (coin_dir[3] > 0 and self_action == 'LEFT'):
+            events.append(e.MOVED_TOWARDS_COIN)
+
+
     self.logger.debug(f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}')
     self.actions += events
 
@@ -96,15 +121,20 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     """
     self.logger.info(f'Encountered event(s) {", ".join(map(repr, events))} in final step')
     self.actions += events
-
     self.round_results.append(calculate_fitness(self))
+
+    # checking if all coins got collected
+    last_state = direction_based_translation(last_game_state, self.loc)
+    if all(np.array(last_state[4]) == 0):
+        events.append(e.ALL_COINS_COLLECTED)
+
     if len(self.round_results) < NUMBER_OF_ROUNDS:
         self.actions.clear()
     else:
         self.fitness_list[self.counter] = statistics.mean(self.round_results)
         self.round_results.clear()
         if self.counter != self.max_models-1:
-            setup_new_round(self, self.counter+1)
+            setup_new_round(self, self.counter + 1)
         else:
             self.loc_arr = []
             print("")
@@ -115,42 +145,31 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
             print(f"Completed round!")
 
 
-def setup_new_round(self, new_counter):
+def setup_new_round(self, new_counter, preserve_own=False):
     """Calculate fitness of current Model then switch to new Model for next rounds."""
     self.actions.clear()
-    self.counter = new_counter
-    with open("counter.txt", "w") as outfile:
-        outfile.write(str(self.counter))
-    self.model = self.current_pool[self.counter]
-
+    if not preserve_own:
+        self.counter = new_counter
+        with open("counter.txt", "w") as outfile:
+            outfile.write(str(self.counter))
+    else:
+        with open("counter.txt", "w") as outfile:
+            outfile.write(str(new_counter))
 def calculate_fitness(self):
     """
     Calculate fitness based on encountered actions.
     """
     fitness_influences = {
-        #e.COIN_COLLECTED: 50,
-        #e.BOMB_DROPPED: 30,
-        #e.KILLED_OPPONENT: 30,
-        #e.KILLED_SELF: -30,
-        #e.GOT_KILLED: -1,
-        #e.CRATE_DESTROYED: 10,
-        #e.INVALID_ACTION: -.5,
-        #e.MOVED_UP: .1,
-        #e.MOVED_DOWN: .1,
-        #e.MOVED_LEFT: .1,
-        #e.MOVED_RIGHT: .1,
-        #e.WAITED: -.5,
-
-        #e.SURVIVED_ROUND: 3,
         e.COIN_COLLECTED: 100,
-        e.KILLED_OPPONENT: 30,
-        e.KILLED_SELF: -4,
-        e.GOT_KILLED: -1,
-        #e.CRATE_DESTROYED: -.1,
-        e.INVALID_ACTION: -.05,
-        e.BOMB_DROPPED: 5,
-        e.BOMB_NEXT_TO_CRATE: 15,
-        e.BOMB_USELESS: -4.75
+        e.INVALID_ACTION: -1,
+        e.WAITED: -50,
+        e.BOMB_DROPPED: -50,
+        e.MOVED_TOWARDS_COIN: 1
+        #e.KILLED_OPPONENT: 30,
+        #e.KILLED_SELF: -4,
+        #e.GOT_KILLED: -1,
+        #e.BOMB_NEXT_TO_CRATE: 15,
+        #e.BOMB_USELESS: -4.99
     }
     unique, counts = np.unique(np.array(self.actions), return_counts=True)
     print(self.loc, dict(zip(unique, counts)))

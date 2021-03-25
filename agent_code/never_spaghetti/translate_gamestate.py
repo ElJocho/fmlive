@@ -51,7 +51,7 @@ def direction_based_translation(gamestate: dict, starting_loc: str) -> np.array:
         elif gamestate["field"][value] == 1:
             crates[i] = 1
         i+=1
-    bombs = direction_sensor(location, gamestate["bombs"], 0)
+    bombs = direction_sensor(location=location, objects=gamestate["bombs"], index=0, bomb=True)
     enemies = direction_sensor(location, gamestate["others"], 3)
     coins = direction_sensor(location, gamestate["coins"], None)
 
@@ -65,47 +65,49 @@ def direction_based_translation(gamestate: dict, starting_loc: str) -> np.array:
     return np.append([relative_inputs[0],], relative_inputs[1:], axis=0)
 
 
-def direction_sensor(location, objects, index):
+def direction_sensor(location, objects, index, bomb=False):
     """We fill it clockwise starting from upper left."""
     result = np.zeros(8)
     for object in objects:
         if index is None:
             x, y = object
-
         else:
             x, y = object[index]
         if y < location[0]:
             if x < location[1]:
-                result[0] = max(result[0], relative_normed_dist(location, (y, x)))
+                result[0] = max(result[0], relative_normed_dist(location, (y, x), bomb))
             elif x == location[1]:
-                result[1] = max(result[1], relative_normed_dist(location, (y, x)))
+                result[1] = max(result[1], relative_normed_dist(location, (y, x), bomb))
             else:
-                result[2] = max(result[2], relative_normed_dist(location, (y, x)))
+                result[2] = max(result[2], relative_normed_dist(location, (y, x), bomb))
         elif y == location[0]:
             if x < location[1]:
-                result[7] = max(result[7], relative_normed_dist(location, (y, x)))
+                result[7] = max(result[7], relative_normed_dist(location, (y, x), bomb))
             elif x == location[1]:
                 pass
             else:
-                result[3] = max(result[3], relative_normed_dist(location, (y, x)))
+                result[3] = max(result[3], relative_normed_dist(location, (y, x), bomb))
         else:
             if x < location[1]:
-                result[6] = max(result[6], relative_normed_dist(location, (y, x)))
+                result[6] = max(result[6], relative_normed_dist(location, (y, x), bomb))
             elif x == location[1]:
-                result[5] = max(result[5], relative_normed_dist(location, (y, x)))
+                result[5] = max(result[5], relative_normed_dist(location, (y, x), bomb))
             else:
-                result[4] = max(result[4], relative_normed_dist(location, (y, x)))
+                result[4] = max(result[4], relative_normed_dist(location, (y, x), bomb))
 
     return result
 
 
-def relative_normed_dist(a, b):
+def relative_normed_dist(a, b, bomb=False):
     """Calculate the euclidean distance, for dummies :("""
     dist = np.linalg.norm(np.array(a) - np.array(b))
-    if dist <= 4:
-        return 1
+    if bomb:
+        if dist <= 4:
+            return 1
+        else:
+            return 1-np.linalg.norm(np.array(a) - np.array(b))/(MAX_DIST-4)
     else:
-        return 1-np.linalg.norm(np.array(a) - np.array(b))/(MAX_DIST-4)
+        return 1 - np.linalg.norm(np.array(a) - np.array(b)) / (MAX_DIST)
 
 
 def get_directions(location):

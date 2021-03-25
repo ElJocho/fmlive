@@ -1,6 +1,7 @@
 import os
 from .translate_gamestate import translate_gamestate, direction_based_translation, bomb_logic
 from .gntm import GNTM
+from .train import setup_new_round
 
 STARTING_POSTITIONS = {
     (1, 1): "ul",
@@ -52,12 +53,23 @@ def act(self, game_state: dict) -> str:
     """
 
     if game_state["step"] == 1:
+        if self.train:
+            with open("counter.txt") as infile:
+                self.counter = int(infile.readline())
+            self.model = self.current_pool[self.counter]
+
         self.loc = (game_state["self"][3][0], game_state["self"][3][1])
         self.loc = STARTING_POSTITIONS[self.loc]
         try:
             self.loc_arr.append(self.loc)
         except:
             pass
+
+    try:
+        self.loc = STARTING_POSTITIONS[(game_state["self"][3][0], game_state["self"][3][1])]
+    except:
+        pass
+
     trans_state = direction_based_translation(game_state, self.loc)
     bomb_logic_arr = bomb_logic(game_state)
     self.logger.debug("Querying model for action.")

@@ -71,6 +71,7 @@ class GenericWorld:
         raise NotImplementedError()
 
     def add_agent(self, agent_dir, name, train=False):
+
         assert len(self.agents) < s.MAX_AGENTS
 
         # if self.args.single_process:

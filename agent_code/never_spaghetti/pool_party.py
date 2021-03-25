@@ -1,9 +1,11 @@
 from .gntm import GNTM
 import os
 import numpy as np
+import json
 from copy import deepcopy
 file_path = os.path.dirname(os.path.realpath(__file__))
 pool_path = os.path.join(file_path, "pool")
+
 
 
 def init_pool(current_pool, num_models: int = None, from_file: bool = False):
@@ -46,6 +48,12 @@ def mutate_models(self, fitness, current_pool):
     fitness_array = np.array(fitness)
     current_pool = [current_pool[i] for i in np.flip(np.argsort(fitness_array)).tolist()]
     print(np.sort(fitness))
+    with open(os.path.join(file_path,"fitness_coin_master.json"), "r") as infile:
+        fitness_per_gen = json.load(infile)
+    fitness_per_gen.append(int(np.sort(fitness)[-1]))
+    print("Generation: ", len(fitness_per_gen) - 1)
+    with open(os.path.join(file_path,"fitness_coin_master.json"), "w") as infile:
+        json.dump(fitness_per_gen, infile)
 
     top_share = self.max_models//5
 
