@@ -5,6 +5,8 @@ import numpy as np
 import settings as s
 learning_rate = 0.0005
 
+MUTATION_RATE = 0.005
+
 
 class GNTM:
 
@@ -42,13 +44,20 @@ class GNTM:
         """Random Mutation in some genes."""
         weights = self.model.get_weights()
         for i in range(len(weights)):
-            for j in range(len(weights[i])):
-                rand_val = np.random.uniform(0,1)
-                if (rand_val > .999):
-                    weights[i][j] *= -1
-                elif(rand_val > .95):
-                    change = np.random.uniform(-0.5,0.5)  # was .5
-                    weights[i][j] += change
+            if i % 2 == 1:
+                for j in range(len(weights[i])):
+                    rand_val = np.random.uniform(0,1)
+                    if(rand_val > 1 - MUTATION_RATE):
+                        mutation = np.random.uniform(-.5, .5)
+                        weights[i][j] += mutation
+            else:
+                for j in range(len(weights[i])):
+                    for k in range(len(weights[i][j])):
+                        rand_val = np.random.uniform(0,1)
+                        if(rand_val > 1 - MUTATION_RATE):
+                            mutation = np.random.uniform(-.5, .5)
+                            weights[i][j][k] += mutation
+
 
         self.get_model().set_weights(weights)
         return self

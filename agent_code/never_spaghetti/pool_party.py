@@ -28,18 +28,18 @@ def make_love_not_gntm(parent_1, parent_2):
     weight_1 = parent_1.get_model().get_weights()
     weight_2 = parent_2.get_model().get_weights()
 
-    new_weight_1 = weight_1
-    new_weight_2 = weight_2
+    new_weight_1 = deepcopy(weight_1)
+    new_weight_2 = deepcopy(weight_2)
+    for i in range(len(new_weight_1)):
+        if i % 2 == 0:
+            gene = np.random.randint(0, len(new_weight_1[i]) - 1)
+            gene_2 = np.random.randint(0, len(new_weight_1[i]) - 1)
+            if gene>gene_2:
+                gene, gene_2 = gene_2, gene
 
-    gene = np.random.randint(0, len(new_weight_1) - 1)
-    gene_2 = np.random.randint(0, len(new_weight_1) - 1)
-
-    if gene>gene_2:
-        gene, gene_2 = gene_2, gene
-
-    if gene!=gene_2:
-        new_weight_1[gene:gene_2] = weight_2[gene:gene_2]
-        new_weight_2[gene:gene_2] = weight_1[gene:gene_2]
+        if gene != gene_2:
+            new_weight_1[i][gene:gene_2] = weight_2[i][gene:gene_2]
+            new_weight_2[i][gene:gene_2] = weight_1[i][gene:gene_2]
 
     return new_weight_1, new_weight_2
 

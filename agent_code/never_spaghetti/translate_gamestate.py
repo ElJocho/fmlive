@@ -23,7 +23,6 @@ def translate_gamestate(gamestate: dict) -> np.array:
     explosion = gamestate["explosion_map"]
     board = np.where(explosion == 1, EXPLOSION, board)
     for enemy in gamestate["others"]:
-        # todo currently we ignore their bomb capability
         if enemy[2]:
             board[enemy[3][0], enemy[3][1]] = ENEMY*10
         else:
@@ -45,12 +44,15 @@ def direction_based_translation(gamestate: dict, starting_loc: str) -> np.array:
     walls = np.zeros(8)
     crates = np.zeros(8)
     i = 0
+
     for key, value in directions.items():
         if gamestate["field"][value] == -1:
             walls[i] = 1
-        elif gamestate["field"][value] == 1:
-            crates[i] = 1
         i+=1
+
+    wall_ind = np.array(np.where(gamestate["field"] == 1))
+    crates = separate_values(direction_sensor(location=location, objects=wall_ind.T, index=None))
+
     bombs = direction_sensor(location=location, objects=gamestate["bombs"], index=0, bomb=True)
     enemies = direction_sensor(location, gamestate["others"], 3)
     coins = direction_sensor(location, gamestate["coins"], None)
@@ -63,7 +65,6 @@ def direction_based_translation(gamestate: dict, starting_loc: str) -> np.array:
     else:
         relative_inputs = inputs
     return np.append([relative_inputs[0],], relative_inputs[1:], axis=0)
-
 
 def direction_sensor(location, objects, index, bomb=False):
     """We fill it clockwise starting from upper left."""
@@ -151,3 +152,9 @@ def bomb_logic(gamestate):
     if (gamestate["self"][3][0],gamestate["self"][3][1]) in [bomb[0] for bomb in gamestate["bombs"]]:
         result[1] = 1
     return result
+
+
+def separate_values(crates):
+    crates = np.where(crates >= 0.935, 1, crates)
+    crates = np.where(crates < 1, crates/2, crates)
+    return crates

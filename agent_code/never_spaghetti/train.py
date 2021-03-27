@@ -31,7 +31,7 @@ def setup_training(self):
     """
     exterminate_old_models = False
     self.loc_arr = []
-    self.max_models = 50
+    self.max_models = 100
     self.current_pool=[]
     self.actions = []
 
@@ -73,26 +73,24 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     """
     if old_game_state is not None:
         last_state = direction_based_translation(old_game_state, self.loc)
-        if last_state[1 , 1::2].any() == 1 and self_action == "BOMB" and old_game_state["self"][2]:
+        bomb_loc = last_state[1, 1::2]
+        if np.array(np.where(bomb_loc > 0.95)).any() and self_action == "BOMB" and old_game_state["self"][2]:
             events.append(e.BOMB_NEXT_TO_CRATE)
+        if bomb_loc[1] > 0.95 and self_action == "BOMB" and old_game_state["self"][2]:
+            events.append(e.BOMB_NEXT_TO_CRATE_RIGHT)
+        if bomb_loc[2] > 0.95 and self_action == "BOMB" and old_game_state["self"][2]:
+            events.append(e.BOMB_NEXT_TO_CRATE_DOWN)
+        enemy_loc = last_state[3, 1::2]
+        if np.array(np.where(enemy_loc > 0.95)).any() and self_action == "BOMB" and old_game_state["self"][2]:
+            events.append(e.BOMB_NEXT_TO_ENEMY)
         if e.BOMB_EXPLODED in events and (e.CRATE_DESTROYED not in events and e.KILLED_OPPONENT not in events):
             events.append(e.BOMB_USELESS)
 
+
+
         coin_dir = last_state[4,1::2]
+        coin_dir = rotate_fov_hor_vert(coin_dir, self.loc)
 
-
-        if self.loc == 'ur':
-            temp = deepcopy(coin_dir[3])
-            coin_dir[1:4] = coin_dir[0:3]
-            coin_dir[0] = temp
-        if self.loc == 'br':
-            temp = deepcopy(coin_dir[2:4])
-            coin_dir[2:4] = coin_dir[0:2]
-            coin_dir[0:2] = temp
-        if self.loc == 'bl':
-            temp = deepcopy(coin_dir[0])
-            coin_dir[0:3] = coin_dir[1:4]
-            coin_dir[3] = temp
         if (coin_dir[0] > 0 and self_action == 'UP'):
             events.append(e.MOVED_TOWARDS_COIN)
         if (coin_dir[1] > 0 and self_action == 'RIGHT'):
@@ -106,6 +104,20 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     self.logger.debug(f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}')
     self.actions += events
 
+def rotate_fov_hor_vert(vec, loc):
+    if loc == 'ur':
+        temp = deepcopy(vec[3])
+        vec[1:4] = vec[0:3]
+        vec[0] = temp
+    if loc == 'br':
+        temp = deepcopy(vec[2:4])
+        vec[2:4] = vec[0:2]
+        vec[0:2] = temp
+    if loc == 'bl':
+        temp = deepcopy(vec[0])
+        vec[0:3] = vec[1:4]
+        vec[3] = temp
+    return vec
 
 def end_of_round(self, last_game_state: dict, last_action: str, events: List[str]):
     """
@@ -161,18 +173,22 @@ def calculate_fitness(self):
     """
     fitness_influences = {
         e.COIN_COLLECTED: 100,
-        e.INVALID_ACTION: -1,
-        e.WAITED: -50,
-        e.BOMB_DROPPED: -50,
-        e.MOVED_TOWARDS_COIN: 1
-        #e.KILLED_OPPONENT: 30,
-        #e.KILLED_SELF: -4,
-        #e.GOT_KILLED: -1,
-        #e.BOMB_NEXT_TO_CRATE: 15,
-        #e.BOMB_USELESS: -4.99
+        e.INVALID_ACTION: -0.01,
+        e.WAITED: -0.025,
+        e.BOMB_DROPPED: 5,
+        e.MOVED_TOWARDS_COIN: 0.01,
+        e.KILLED_OPPONENT: 20,
+        e.KILLED_SELF: -4,
+        e.GOT_KILLED: -1,
+        e.BOMB_NEXT_TO_CRATE: 15,
+        e.BOMB_USELESS: -4.99,
+        e.BOMB_NEXT_TO_ENEMY: 1000
+        #e.BOMB_NEXT_TO_CRATE_RIGHT: 100
     }
+
     unique, counts = np.unique(np.array(self.actions), return_counts=True)
     print(self.loc, dict(zip(unique, counts)))
+
     fitness = 0
     for event in self.actions:
         if event in fitness_influences:
@@ -184,3 +200,4 @@ def calculate_fitness(self):
         json.dump(self.fitness_list, outpath)
 
     return fitness
+

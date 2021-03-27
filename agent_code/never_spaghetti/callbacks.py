@@ -60,6 +60,7 @@ def act(self, game_state: dict) -> str:
 
         self.loc = (game_state["self"][3][0], game_state["self"][3][1])
         self.loc = STARTING_POSTITIONS[self.loc]
+        self.loc_past = self.loc
         try:
             self.loc_arr.append(self.loc)
         except:
@@ -69,7 +70,6 @@ def act(self, game_state: dict) -> str:
         self.loc = STARTING_POSTITIONS[(game_state["self"][3][0], game_state["self"][3][1])]
     except:
         pass
-
     trans_state = direction_based_translation(game_state, self.loc)
     bomb_logic_arr = bomb_logic(game_state)
     self.logger.debug("Querying model for action.")
