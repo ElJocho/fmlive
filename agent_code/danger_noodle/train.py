@@ -32,7 +32,7 @@ def setup_training(self) -> None:
 
     This is called after `setup` in callbacks.py.
 
-    :param self: This object is passed to all callbacks and you can set arbitrary values.
+    :param self: This object is passed to all callbacks and you can set arbitrary values
     """
     exterminate_old_models = False
     self.loc_arr = []
@@ -75,11 +75,11 @@ def game_events_occurred(
     settings.py to see what events are tracked. You can hand out rewards to your
     agent based on these events and your knowledge of the (new) game state.
 
-    :param self: This object is passed to all callbacks and you can set arbitrary values.
+    :param self: This object is passed to all callbacks and you can set arbitrary values
     :param old_game_state: The state that was passed to the last call of `act`.
     :param self_action: The action that you took.
     :param new_game_state: The state the agent is in now.
-    :param events: The events that occurred when going from  `old_game_state` to `new_game_state`
+    :param events: The events when going from `old_game_state` to `new_game_state`
     """
     if old_game_state is not None:
         last_state = direction_based_translation(old_game_state, self.loc)
@@ -125,7 +125,7 @@ def game_events_occurred(
 
 
 def rotate_fov_hor_vert(vec: np.array, loc: tuple) -> np.array:
-    """Rotate to match wanted action with coin directions. Helper function only used for rewards."""
+    """Rotate to match wanted action with coin directions. Used for rewards."""
     if loc == "ur":
         temp = deepcopy(vec[3])
         vec[1:4] = vec[0:3]
@@ -211,7 +211,6 @@ def calculate_fitness(self) -> float:
         e.BOMB_NEXT_TO_CRATE: 15,
         e.BOMB_USELESS: -4.99,
         e.BOMB_NEXT_TO_ENEMY: 1000
-        # e.BOMB_NEXT_TO_CRATE_RIGHT: 100
     }
 
     unique, counts = np.unique(np.array(self.actions), return_counts=True)
