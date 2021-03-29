@@ -36,6 +36,7 @@ class GNTM:
         return self.model
 
     def get_predict(self, gamestate: dict, bomb_logic_arr: np.array) -> np.array:
+        """Get the predicted index."""
         flat_gamestate = np.append(gamestate.flatten(), bomb_logic_arr)
         flat_gamestate = np.atleast_2d(flat_gamestate)
         target_f = self.model.predict(flat_gamestate)
