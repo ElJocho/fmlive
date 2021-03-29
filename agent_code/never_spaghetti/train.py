@@ -141,7 +141,9 @@ def rotate_fov_hor_vert(vec: np.array, loc: tuple) -> np.array:
     return vec
 
 
-def end_of_round(self, last_game_state: dict, last_action: str, events: List[str]) -> None:
+def end_of_round(
+    self, last_game_state: dict, last_action: str, events: List[str]
+) -> None:
     """
     Called at the end of each game or when the agent died to hand out final rewards.
 

@@ -10,7 +10,9 @@ file_path = os.path.dirname(os.path.realpath(__file__))
 pool_path = os.path.join(file_path, "pool")
 
 
-def init_pool(current_pool: list, num_models: int = None, from_file: bool = False) -> list:
+def init_pool(
+    current_pool: list, num_models: int = None, from_file: bool = False
+) -> list:
     """Either num_models or from file has to be specified."""
     for i in range(num_models):
         model = GNTM()

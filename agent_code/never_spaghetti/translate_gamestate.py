@@ -1,5 +1,7 @@
-import numpy as np
 from typing import Union
+
+import numpy as np
+
 import settings as s
 
 UNOCCUPIED = 0
@@ -55,7 +57,9 @@ def direction_based_translation(gamestate: dict, starting_loc: str) -> np.array:
     )
 
 
-def direction_sensor(location: np.array, objects: list, index: Union[int, None], bomb: bool = False) -> np.array:
+def direction_sensor(
+    location: np.array, objects: list, index: Union[int, None], bomb: bool = False
+) -> np.array:
     """We fill it clockwise starting from upper left."""
     result = np.zeros(8)
     for object in objects:
