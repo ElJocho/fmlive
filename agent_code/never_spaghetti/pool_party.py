@@ -10,8 +10,8 @@ file_path = os.path.dirname(os.path.realpath(__file__))
 pool_path = os.path.join(file_path, "pool")
 
 
-def init_pool(current_pool, num_models: int = None, from_file: bool = False):
-    """Either num_models or from file has to be specified"""
+def init_pool(current_pool: list, num_models: int = None, from_file: bool = False) -> list:
+    """Either num_models or from file has to be specified."""
     for i in range(num_models):
         model = GNTM()
         current_pool.append(model)
@@ -26,7 +26,7 @@ def init_pool(current_pool, num_models: int = None, from_file: bool = False):
     return current_pool
 
 
-def make_love_not_gntm(parent_1, parent_2):
+def make_love_not_gntm(parent_1: GNTM, parent_2: GNTM) -> tuple:
     """Produce offspring with genes from 2 parents."""
     weight_1 = parent_1.get_model().get_weights()
     weight_2 = parent_2.get_model().get_weights()
@@ -47,7 +47,7 @@ def make_love_not_gntm(parent_1, parent_2):
     return new_weight_1, new_weight_2
 
 
-def mutate_models(self, fitness, current_pool):
+def mutate_models(self, fitness: list, current_pool: list) -> list:
     """Orchestrate the mutation and gene crossover and set up the new generation."""
     fitness_array = np.array(fitness)
     current_pool = [

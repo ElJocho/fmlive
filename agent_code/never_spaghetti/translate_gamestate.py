@@ -1,5 +1,5 @@
 import numpy as np
-
+from typing import Union
 import settings as s
 
 UNOCCUPIED = 0
@@ -55,7 +55,7 @@ def direction_based_translation(gamestate: dict, starting_loc: str) -> np.array:
     )
 
 
-def direction_sensor(location, objects, index, bomb=False):
+def direction_sensor(location: np.array, objects: list, index: Union[int, None], bomb: bool = False) -> np.array:
     """We fill it clockwise starting from upper left."""
     result = np.zeros(8)
     for object in objects:
@@ -88,7 +88,7 @@ def direction_sensor(location, objects, index, bomb=False):
     return result
 
 
-def relative_normed_dist(a, b, bomb=False):
+def relative_normed_dist(a: tuple, b: tuple, bomb: bool = False) -> float:
     """Calculate a value which serves as the distance from self to object."""
     dist = np.linalg.norm(np.array(a) - np.array(b))
     if bomb:
@@ -100,7 +100,7 @@ def relative_normed_dist(a, b, bomb=False):
         return 1 - np.linalg.norm(np.array(a) - np.array(b)) / MAX_DIST
 
 
-def get_directions(location):
+def get_directions(location: np.array) -> dict:
     """Directions are based on compass directions."""
     j, i = location
     directions = {
@@ -116,7 +116,7 @@ def get_directions(location):
     return directions
 
 
-def rotate_fov(vec, starting_loc):
+def rotate_fov(vec: np.array, starting_loc: str) -> np.array:
     """Rotate in a way that gntm always feels like it is in the upper left corner."""
     if starting_loc == "bl":
         rotate = 3
@@ -133,7 +133,7 @@ def rotate_fov(vec, starting_loc):
     return vec
 
 
-def bomb_logic(gamestate):
+def bomb_logic(gamestate: dict) -> np.array:
     """Can it lay a bomb and is it on a bomb."""
     result = np.zeros(2)
     if gamestate["self"][2]:
@@ -145,7 +145,7 @@ def bomb_logic(gamestate):
     return result
 
 
-def separate_values(crates):
+def separate_values(crates: np.array) -> np.array:
     """Differentiate between next to a crate and close to a crate."""
     crates = np.where(crates >= 0.935, 1, crates)
     crates = np.where(crates < 1, crates / 2, crates)

@@ -11,7 +11,7 @@ MUTATION_RATE = 0.005
 
 
 class GNTM:
-    def __init__(self, file=None):
+    def __init__(self, file: str = None):
         """Init Neural network."""
         # num_dim = s.COLS * s.ROWS # for grid only approach
         num_dim = 5 * 8 + 2
@@ -31,11 +31,11 @@ class GNTM:
             gntm.load_weights(file)
         self.model = gntm
 
-    def get_model(self):
+    def get_model(self) -> keras.Sequential:
         """Model getter."""
         return self.model
 
-    def get_predict(self, gamestate, bomb_logic_arr):
+    def get_predict(self, gamestate: dict, bomb_logic_arr: np.array) -> np.array:
         flat_gamestate = np.append(gamestate.flatten(), bomb_logic_arr)
         flat_gamestate = np.atleast_2d(flat_gamestate)
         target_f = self.model.predict(flat_gamestate)
@@ -63,6 +63,6 @@ class GNTM:
         self.get_model().set_weights(weights)
         return self
 
-    def set_weights(self, weights):
+    def set_weights(self, weights: list):
         """Weight setter."""
         self.model.set_weights(weights=weights)

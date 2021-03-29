@@ -26,7 +26,7 @@ PLACEHOLDER_EVENT = "PLACEHOLDER"
 NUMBER_OF_ROUNDS = 1
 
 
-def setup_training(self):
+def setup_training(self) -> None:
     """
     Initialise self for training purpose.
 
@@ -66,7 +66,7 @@ def game_events_occurred(
     self_action: str,
     new_game_state: dict,
     events: List[str],
-):
+) -> None:
     """
     Called once per step to allow intermediate rewards based on game events.
 
@@ -124,7 +124,7 @@ def game_events_occurred(
     self.actions += events
 
 
-def rotate_fov_hor_vert(vec, loc):
+def rotate_fov_hor_vert(vec: np.array, loc: tuple) -> np.array:
     """Rotate to match wanted action with coin directions. Only used for rewards."""
     if loc == "ur":
         temp = deepcopy(vec[3])
@@ -141,7 +141,7 @@ def rotate_fov_hor_vert(vec, loc):
     return vec
 
 
-def end_of_round(self, last_game_state: dict, last_action: str, events: List[str]):
+def end_of_round(self, last_game_state: dict, last_action: str, events: List[str]) -> None:
     """
     Called at the end of each game or when the agent died to hand out final rewards.
 
@@ -183,7 +183,7 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
             print(f"Completed round!")
 
 
-def setup_new_round(self, new_counter, preserve_own=False):
+def setup_new_round(self, new_counter: int, preserve_own: bool = False) -> None:
     """Calculate fitness of current Model then switch to new Model for next rounds."""
     self.actions.clear()
     if not preserve_own:
@@ -195,7 +195,7 @@ def setup_new_round(self, new_counter, preserve_own=False):
             outfile.write(str(new_counter))
 
 
-def calculate_fitness(self):
+def calculate_fitness(self) -> float:
     """Calculate fitness based on encountered actions."""
     fitness_influences = {
         e.COIN_COLLECTED: 100,
