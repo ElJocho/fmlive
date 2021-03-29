@@ -125,7 +125,7 @@ def game_events_occurred(
 
 
 def rotate_fov_hor_vert(vec, loc):
-    """Rotate to match wanted action with coin directions. Only used for rewards."""
+    """Rotate to match wanted action with coin directions. Helper function only used for rewards."""
     if loc == "ur":
         temp = deepcopy(vec[3])
         vec[1:4] = vec[0:3]
