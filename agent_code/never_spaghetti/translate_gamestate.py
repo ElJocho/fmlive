@@ -56,7 +56,7 @@ def direction_based_translation(gamestate: dict, starting_loc: str) -> np.array:
     bombs = direction_sensor(location=location, objects=gamestate["bombs"], index=0, bomb=True)
     enemies = direction_sensor(location, gamestate["others"], 3)
     coins = direction_sensor(location, gamestate["coins"], None)
-
+    coins[0::2] = 0
     inputs = [walls, crates, bombs, enemies, coins]
     relative_inputs = []
     if starting_loc != "ul":

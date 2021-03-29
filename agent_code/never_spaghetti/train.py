@@ -176,18 +176,19 @@ def calculate_fitness(self):
         e.INVALID_ACTION: -0.01,
         e.WAITED: -0.025,
         e.BOMB_DROPPED: 5,
-        e.MOVED_TOWARDS_COIN: 0.01,
+        e.MOVED_TOWARDS_COIN: 0.5,
         e.KILLED_OPPONENT: 20,
         e.KILLED_SELF: -4,
         e.GOT_KILLED: -1,
         e.BOMB_NEXT_TO_CRATE: 15,
         e.BOMB_USELESS: -4.99,
-        e.BOMB_NEXT_TO_ENEMY: 1000
-        #e.BOMB_NEXT_TO_CRATE_RIGHT: 100
+        e.BOMB_NEXT_TO_ENEMY: 50
+        #e.BOMB_NEXT_TO_CRATE_DOWN: 10,
+        #e.BOMB_NEXT_TO_CRATE_RIGHT: 10
     }
 
-    unique, counts = np.unique(np.array(self.actions), return_counts=True)
-    print(self.loc, dict(zip(unique, counts)))
+    #unique, counts = np.unique(np.array(self.actions), return_counts=True)
+    #print(self.loc, dict(zip(unique, counts)))
 
     fitness = 0
     for event in self.actions:

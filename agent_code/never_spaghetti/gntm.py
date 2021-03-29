@@ -5,7 +5,7 @@ import numpy as np
 import settings as s
 learning_rate = 0.0005
 
-MUTATION_RATE = 0.005
+MUTATION_RATE = 0.001
 
 
 class GNTM:
