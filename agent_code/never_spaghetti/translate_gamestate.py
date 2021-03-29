@@ -1,6 +1,6 @@
 import numpy as np
+
 import settings as s
-from copy import deepcopy
 
 UNOCCUPIED = 0
 PLAYER = 1
@@ -8,52 +8,34 @@ ENEMY = 2
 WALL = 3
 CRATE = 4
 COIN = 5
-BOMB = [-1,-2,-3,-4]
+BOMB = [-1, -2, -3, -4]
 # todo if we have more than one turn where the explosions are deadly we need an array
 EXPLOSION = -5
-MAX_DIST = np.linalg.norm(np.array((s.COLS-2, s.ROWS-2)))
-
-
-def translate_gamestate(gamestate: dict) -> np.array:
-    """Translate the given gamestate to a array with values for each occupied space."""
-    board = np.where(gamestate["field"] == -1, WALL, gamestate["field"])
-    board = np.where(board == 1, CRATE, board)
-    for bomb in gamestate["bombs"]:
-        board[bomb[0][0], bomb[0][1]] = BOMB[bomb[1]]
-    explosion = gamestate["explosion_map"]
-    board = np.where(explosion == 1, EXPLOSION, board)
-    for enemy in gamestate["others"]:
-        if enemy[2]:
-            board[enemy[3][0], enemy[3][1]] = ENEMY*10
-        else:
-            board[enemy[3][0], enemy[3][1]] = ENEMY
-    if gamestate["self"][2]:
-        board[gamestate["self"][3][0], gamestate["self"][3][1]] = PLAYER*10
-    else:
-        board[gamestate["self"][3][0], gamestate["self"][3][1]] = PLAYER
-
-    return board
+MAX_DIST = np.linalg.norm(np.array((s.COLS - 2, s.ROWS - 2)))
 
 
 def direction_based_translation(gamestate: dict, starting_loc: str) -> np.array:
-    """Here we translate gamestate into a 8*5 array which indicates directions of various elements."""
+    """Translate gamestate to a 8*5 array which indicates directions of elements."""
     location = np.flip(np.array(gamestate["self"][3]))
 
     directions = get_directions(location)
     # walls n crates
     walls = np.zeros(8)
-    crates = np.zeros(8)
     i = 0
 
     for key, value in directions.items():
         if gamestate["field"][value] == -1:
             walls[i] = 1
-        i+=1
+        i += 1
 
     wall_ind = np.array(np.where(gamestate["field"] == 1))
-    crates = separate_values(direction_sensor(location=location, objects=wall_ind.T, index=None))
+    crates = separate_values(
+        direction_sensor(location=location, objects=wall_ind.T, index=None)
+    )
 
-    bombs = direction_sensor(location=location, objects=gamestate["bombs"], index=0, bomb=True)
+    bombs = direction_sensor(
+        location=location, objects=gamestate["bombs"], index=0, bomb=True
+    )
     enemies = direction_sensor(location, gamestate["others"], 3)
     coins = direction_sensor(location, gamestate["coins"], None)
 
@@ -64,7 +46,14 @@ def direction_based_translation(gamestate: dict, starting_loc: str) -> np.array:
             relative_inputs.append(rotate_fov(input, starting_loc))
     else:
         relative_inputs = inputs
-    return np.append([relative_inputs[0],], relative_inputs[1:], axis=0)
+    return np.append(
+        [
+            relative_inputs[0],
+        ],
+        relative_inputs[1:],
+        axis=0,
+    )
+
 
 def direction_sensor(location, objects, index, bomb=False):
     """We fill it clockwise starting from upper left."""
@@ -100,15 +89,15 @@ def direction_sensor(location, objects, index, bomb=False):
 
 
 def relative_normed_dist(a, b, bomb=False):
-    """Calculate the euclidean distance, for dummies :("""
+    """Calculate a value which serves as the distance from self to object."""
     dist = np.linalg.norm(np.array(a) - np.array(b))
     if bomb:
         if dist <= 4:
             return 1
         else:
-            return 1-np.linalg.norm(np.array(a) - np.array(b))/(MAX_DIST-4)
+            return 1 - np.linalg.norm(np.array(a) - np.array(b)) / (MAX_DIST - 4)
     else:
-        return 1 - np.linalg.norm(np.array(a) - np.array(b)) / (MAX_DIST)
+        return 1 - np.linalg.norm(np.array(a) - np.array(b)) / MAX_DIST
 
 
 def get_directions(location):
@@ -122,12 +111,12 @@ def get_directions(location):
         "se": (i + 1, j + 1),
         "e": (i, j + 1),
         "ne": (i - 1, j + 1),
-        "n": (i-1, j)
+        "n": (i - 1, j),
     }
     return directions
 
 
-def rotate_fov(input, starting_loc):
+def rotate_fov(vec, starting_loc):
     """Rotate in a way that gntm always feels like it is in the upper left corner."""
     if starting_loc == "bl":
         rotate = 3
@@ -138,23 +127,26 @@ def rotate_fov(input, starting_loc):
     else:
         raise ValueError
     for _ in range(rotate):
-        first_2 = np.copy(input[:2])
-        input[:6] = input[2:]
-        input[6:] = first_2
-    return input
+        first_2 = np.copy(vec[:2])
+        vec[:6] = vec[2:]
+        vec[6:] = first_2
+    return vec
 
 
 def bomb_logic(gamestate):
     """Can it lay a bomb and is it on a bomb."""
     result = np.zeros(2)
     if gamestate["self"][2]:
-       result[0] = 1
-    if (gamestate["self"][3][0],gamestate["self"][3][1]) in [bomb[0] for bomb in gamestate["bombs"]]:
+        result[0] = 1
+    if (gamestate["self"][3][0], gamestate["self"][3][1]) in [
+        bomb[0] for bomb in gamestate["bombs"]
+    ]:
         result[1] = 1
     return result
 
 
 def separate_values(crates):
+    """Differentiate between next to a crate and close to a crate."""
     crates = np.where(crates >= 0.935, 1, crates)
-    crates = np.where(crates < 1, crates/2, crates)
+    crates = np.where(crates < 1, crates / 2, crates)
     return crates

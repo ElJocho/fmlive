@@ -1,17 +1,21 @@
-from collections import namedtuple, deque
-from typing import List
-import numpy as np
 import json
-import events as e
 import os
+import statistics
+from collections import namedtuple
+from copy import deepcopy
+from typing import List
+
+import numpy as np
+
+import events as e
+
 from .pool_party import init_pool, mutate_models
 from .translate_gamestate import direction_based_translation
-from copy import deepcopy
+
 file_path = os.path.dirname(os.path.realpath(__file__))
-import statistics
+
 # This is only an example!
-Transition = namedtuple('Transition',
-                        ('state', 'action', 'next_state', 'reward'))
+Transition = namedtuple("Transition", ("state", "action", "next_state", "reward"))
 
 # Hyper parameters -- DO modify
 TRANSITION_HISTORY_SIZE = 3  # keep only ... last transitions
@@ -20,6 +24,7 @@ RECORD_ENEMY_TRANSITIONS = 1.0  # record enemy transitions with probability ...
 # Events
 PLACEHOLDER_EVENT = "PLACEHOLDER"
 NUMBER_OF_ROUNDS = 1
+
 
 def setup_training(self):
     """
@@ -32,7 +37,7 @@ def setup_training(self):
     exterminate_old_models = False
     self.loc_arr = []
     self.max_models = 100
-    self.current_pool=[]
+    self.current_pool = []
     self.actions = []
 
     self.round_results = []
@@ -45,16 +50,23 @@ def setup_training(self):
         self.current_pool = init_pool(self.current_pool, num_models=self.max_models)
         self.fitness_list = [-999 for x in range(self.max_models)]
         with open(os.path.join(file_path, "fitness_coin_master.json"), "w") as infile:
-            json.dump([0],infile)
+            json.dump([0], infile)
     else:
         with open(os.path.join(file_path, "fitness.json"), "r") as infile:
             self.fitness_list = json.load(infile)
 
+        self.current_pool = init_pool(
+            num_models=self.max_models, current_pool=self.current_pool, from_file=True
+        )
 
-        self.current_pool = init_pool(num_models=self.max_models,current_pool=self.current_pool, from_file=True)
 
-
-def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_state: dict, events: List[str]):
+def game_events_occurred(
+    self,
+    old_game_state: dict,
+    self_action: str,
+    new_game_state: dict,
+    events: List[str],
+):
     """
     Called once per step to allow intermediate rewards based on game events.
 
@@ -62,8 +74,6 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     events relevant to your agent that occurred during the previous step. Consult
     settings.py to see what events are tracked. You can hand out rewards to your
     agent based on these events and your knowledge of the (new) game state.
-
-    This is *one* of the places where you could update your agent.
 
     :param self: This object is passed to all callbacks and you can set arbitrary values.
     :param old_game_state: The state that was passed to the last call of `act`.
@@ -74,50 +84,62 @@ def game_events_occurred(self, old_game_state: dict, self_action: str, new_game_
     if old_game_state is not None:
         last_state = direction_based_translation(old_game_state, self.loc)
         bomb_loc = last_state[1, 1::2]
-        if np.array(np.where(bomb_loc > 0.95)).any() and self_action == "BOMB" and old_game_state["self"][2]:
+        if (
+            np.array(np.where(bomb_loc > 0.95)).any()
+            and self_action == "BOMB"
+            and old_game_state["self"][2]
+        ):
             events.append(e.BOMB_NEXT_TO_CRATE)
         if bomb_loc[1] > 0.95 and self_action == "BOMB" and old_game_state["self"][2]:
             events.append(e.BOMB_NEXT_TO_CRATE_RIGHT)
         if bomb_loc[2] > 0.95 and self_action == "BOMB" and old_game_state["self"][2]:
             events.append(e.BOMB_NEXT_TO_CRATE_DOWN)
         enemy_loc = last_state[3, 1::2]
-        if np.array(np.where(enemy_loc > 0.95)).any() and self_action == "BOMB" and old_game_state["self"][2]:
+        if (
+            np.array(np.where(enemy_loc > 0.95)).any()
+            and self_action == "BOMB"
+            and old_game_state["self"][2]
+        ):
             events.append(e.BOMB_NEXT_TO_ENEMY)
-        if e.BOMB_EXPLODED in events and (e.CRATE_DESTROYED not in events and e.KILLED_OPPONENT not in events):
+        if e.BOMB_EXPLODED in events and (
+            e.CRATE_DESTROYED not in events and e.KILLED_OPPONENT not in events
+        ):
             events.append(e.BOMB_USELESS)
 
-
-
-        coin_dir = last_state[4,1::2]
+        coin_dir = last_state[4, 1::2]
         coin_dir = rotate_fov_hor_vert(coin_dir, self.loc)
 
-        if (coin_dir[0] > 0 and self_action == 'UP'):
+        if coin_dir[0] > 0 and self_action == "UP":
             events.append(e.MOVED_TOWARDS_COIN)
-        if (coin_dir[1] > 0 and self_action == 'RIGHT'):
+        if coin_dir[1] > 0 and self_action == "RIGHT":
             events.append(e.MOVED_TOWARDS_COIN)
-        if (coin_dir[2] > 0 and self_action == 'DOWN'):
+        if coin_dir[2] > 0 and self_action == "DOWN":
             events.append(e.MOVED_TOWARDS_COIN)
-        if (coin_dir[3] > 0 and self_action == 'LEFT'):
+        if coin_dir[3] > 0 and self_action == "LEFT":
             events.append(e.MOVED_TOWARDS_COIN)
 
-
-    self.logger.debug(f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}')
+    self.logger.debug(
+        f'Encountered game event(s) {", ".join(map(repr, events))} in step {new_game_state["step"]}'
+    )
     self.actions += events
 
+
 def rotate_fov_hor_vert(vec, loc):
-    if loc == 'ur':
+    """Rotate to match wanted action with coin directions. Only used for rewards."""
+    if loc == "ur":
         temp = deepcopy(vec[3])
         vec[1:4] = vec[0:3]
         vec[0] = temp
-    if loc == 'br':
+    if loc == "br":
         temp = deepcopy(vec[2:4])
         vec[2:4] = vec[0:2]
         vec[0:2] = temp
-    if loc == 'bl':
+    if loc == "bl":
         temp = deepcopy(vec[0])
         vec[0:3] = vec[1:4]
         vec[3] = temp
     return vec
+
 
 def end_of_round(self, last_game_state: dict, last_action: str, events: List[str]):
     """
@@ -131,7 +153,9 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
 
     :param self: The same object that is passed to all of your callbacks.
     """
-    self.logger.info(f'Encountered event(s) {", ".join(map(repr, events))} in final step')
+    self.logger.info(
+        f'Encountered event(s) {", ".join(map(repr, events))} in final step'
+    )
     self.actions += events
     self.round_results.append(calculate_fitness(self))
 
@@ -145,14 +169,16 @@ def end_of_round(self, last_game_state: dict, last_action: str, events: List[str
     else:
         self.fitness_list[self.counter] = statistics.mean(self.round_results)
         self.round_results.clear()
-        if self.counter != self.max_models-1:
+        if self.counter != self.max_models - 1:
             setup_new_round(self, self.counter + 1)
         else:
             self.loc_arr = []
             print("")
             print(self.fitness_list, statistics.mean(self.fitness_list))
-            self.current_pool = mutate_models(self, fitness=self.fitness_list, current_pool=self.current_pool)
-            setup_new_round(self, self.counter-(self.max_models-1))
+            self.current_pool = mutate_models(
+                self, fitness=self.fitness_list, current_pool=self.current_pool
+            )
+            setup_new_round(self, self.counter - (self.max_models - 1))
             self.fitness_list = [-999 for x in range(self.max_models)]
             print(f"Completed round!")
 
@@ -167,10 +193,10 @@ def setup_new_round(self, new_counter, preserve_own=False):
     else:
         with open("counter.txt", "w") as outfile:
             outfile.write(str(new_counter))
+
+
 def calculate_fitness(self):
-    """
-    Calculate fitness based on encountered actions.
-    """
+    """Calculate fitness based on encountered actions."""
     fitness_influences = {
         e.COIN_COLLECTED: 100,
         e.INVALID_ACTION: -0.01,
@@ -183,7 +209,7 @@ def calculate_fitness(self):
         e.BOMB_NEXT_TO_CRATE: 15,
         e.BOMB_USELESS: -4.99,
         e.BOMB_NEXT_TO_ENEMY: 1000
-        #e.BOMB_NEXT_TO_CRATE_RIGHT: 100
+        # e.BOMB_NEXT_TO_CRATE_RIGHT: 100
     }
 
     unique, counts = np.unique(np.array(self.actions), return_counts=True)
@@ -200,4 +226,3 @@ def calculate_fitness(self):
         json.dump(self.fitness_list, outpath)
 
     return fitness
-

@@ -1,14 +1,9 @@
 import os
-from .translate_gamestate import translate_gamestate, direction_based_translation, bomb_logic
-from .gntm import GNTM
-from .train import setup_new_round
 
-STARTING_POSTITIONS = {
-    (1, 1): "ul",
-    (1, 15): "bl",
-    (15, 1): "ur",
-    (15, 15): "br"
-}
+from .gntm import GNTM
+from .translate_gamestate import bomb_logic, direction_based_translation
+
+STARTING_POSTITIONS = {(1, 1): "ul", (1, 15): "bl", (15, 1): "ur", (15, 15): "br"}
 
 DIRECTION_SWITCHER = {
     "ul": {"UP": "UP", "RIGHT": "RIGHT", "LEFT": "LEFT", "DOWN": "DOWN"},
@@ -17,7 +12,7 @@ DIRECTION_SWITCHER = {
     "ur": {"UP": "RIGHT", "RIGHT": "DOWN", "LEFT": "UP", "DOWN": "LEFT"},
 }
 
-ACTIONS = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'WAIT', 'BOMB']
+ACTIONS = ["UP", "RIGHT", "DOWN", "LEFT", "WAIT", "BOMB"]
 
 
 def setup(self):
@@ -51,7 +46,6 @@ def act(self, game_state: dict) -> str:
     :param game_state: The dictionary that describes everything on the board.
     :return: The action to take as a string.
     """
-
     if game_state["step"] == 1:
         if self.train:
             with open("counter.txt") as infile:
@@ -67,7 +61,9 @@ def act(self, game_state: dict) -> str:
             pass
 
     try:
-        self.loc = STARTING_POSTITIONS[(game_state["self"][3][0], game_state["self"][3][1])]
+        self.loc = STARTING_POSTITIONS[
+            (game_state["self"][3][0], game_state["self"][3][1])
+        ]
     except:
         pass
     trans_state = direction_based_translation(game_state, self.loc)
